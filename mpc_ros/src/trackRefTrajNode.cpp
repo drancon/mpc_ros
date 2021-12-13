@@ -62,7 +62,7 @@ class MPCNode
     private:
         ros::NodeHandle _nh;
         ros::Subscriber _sub_odom, _sub_gen_path, _sub_path, _sub_goal, _sub_amcl;
-        ros::Publisher _pub_totalcost, _pub_ctecost, _pub_ethetacost,_pub_odompath, _pub_twist, _pub_ackermann, _pub_mpctraj;
+        ros::Publisher _pub_totalcost, _pub_ctecost, _pub_ethetacost,_pub_odompath, _pub_twist, _pub_mpctraj;
         ros::Timer _timer1;
         tf::TransformListener _tf_listener;
 

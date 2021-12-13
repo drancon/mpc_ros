@@ -22,7 +22,7 @@ import math
 import serial
 import string
 from geometry_msgs.msg import Twist
-from ackermann_msgs.msg import AckermannDriveStamped
+# from ackermann_msgs.msg import AckermannDriveStamped
 from nav_msgs.msg import Odometry
 
 class BaseControl:
@@ -63,8 +63,8 @@ class BaseControl:
         rospy.loginfo("Communication success !")
 
         # ROS handler        
-        self.sub_cmd  = rospy.Subscriber('ackermann_cmd', AckermannDriveStamped, self.ackermannCmdCB, queue_size=10)
-        self.sub_safe = rospy.Subscriber('ackermann_safe', AckermannDriveStamped, self.ackermannSafeCB, queue_size=10)
+        # self.sub_cmd  = rospy.Subscriber('ackermann_cmd', AckermannDriveStamped, self.ackermannCmdCB, queue_size=10)
+        # self.sub_safe = rospy.Subscriber('ackermann_safe', AckermannDriveStamped, self.ackermannSafeCB, queue_size=10)
         self.pub = rospy.Publisher(self.odom_topic, Odometry, queue_size=10)   
         self.timer_odom = rospy.Timer(rospy.Duration(1.0/self.odom_freq), self.timerOdomCB) 
         self.timer_cmd = rospy.Timer(rospy.Duration(0.05), self.timerCmdCB) # 10Hz
@@ -99,34 +99,34 @@ class BaseControl:
             else:
                 self.serial.read(1)
 
-    def ackermannCmdCB(self, data):
-        self.cmd_steering = data.drive.steering_angle # radian
-        if self.cmd_steering > (self.cmd_steering_bound - abs(self.neutralPt_radian)): # shrink the bound range by subtracting the neutral point
-            self.cmd_steering = self.cmd_steering_bound - abs(self.neutralPt_radian)
-        if self.cmd_steering < -(self.cmd_steering_bound - abs(self.neutralPt_radian)):
-            self.cmd_steering = -(self.cmd_steering_bound - abs(self.neutralPt_radian))
-        self.cmd_speed    = data.drive.speed
-        if self.cmd_speed > (self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate): # decrease speed if compensation added value is higher than the bound 
-            self.cmd_speed = self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate
-        if self.cmd_speed < -(self.cmd_speed_bound- self.compensate_factor*self.max_speed_compensate):
-            self.cmd_speed = -(self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate)
-        self.cmd_time     = rospy.Time.now()
-        self.timeOut_flag = 0 # reset
+    # def ackermannCmdCB(self, data):
+    #     self.cmd_steering = data.drive.steering_angle # radian
+    #     if self.cmd_steering > (self.cmd_steering_bound - abs(self.neutralPt_radian)): # shrink the bound range by subtracting the neutral point
+    #         self.cmd_steering = self.cmd_steering_bound - abs(self.neutralPt_radian)
+    #     if self.cmd_steering < -(self.cmd_steering_bound - abs(self.neutralPt_radian)):
+    #         self.cmd_steering = -(self.cmd_steering_bound - abs(self.neutralPt_radian))
+    #     self.cmd_speed    = data.drive.speed
+    #     if self.cmd_speed > (self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate): # decrease speed if compensation added value is higher than the bound 
+    #         self.cmd_speed = self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate
+    #     if self.cmd_speed < -(self.cmd_speed_bound- self.compensate_factor*self.max_speed_compensate):
+    #         self.cmd_speed = -(self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate)
+    #     self.cmd_time     = rospy.Time.now()
+    #     self.timeOut_flag = 0 # reset
 
     # Relay: Safety commands
-    def ackermannSafeCB(self, data):
-        self.safe_steering = data.drive.steering_angle # radian
-        if self.safe_steering > (self.cmd_steering_bound - abs(self.neutralPt_radian)): # shrink the bound range by subtracting the neutral point
-            self.safe_steering = self.cmd_steering_bound - abs(self.neutralPt_radian)
-        if self.safe_steering < -(self.cmd_steering_bound - abs(self.neutralPt_radian)):
-            self.safe_steering = -(self.cmd_steering_bound - abs(self.neutralPt_radian))
-        self.safe_speed    = data.drive.speed
-        if self.safe_speed > (self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate): # decrease speed if compensation added value is higher than the bound 
-            self.safe_speed = self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate
-        if self.safe_speed < -(self.cmd_speed_bound- self.compensate_factor*self.max_speed_compensate):
-            self.safe_speed = -(self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate)
-        self.safe_time     = rospy.Time.now()
-        self.timeOut_flag = 0 # reset
+    # def ackermannSafeCB(self, data):
+    #     self.safe_steering = data.drive.steering_angle # radian
+    #     if self.safe_steering > (self.cmd_steering_bound - abs(self.neutralPt_radian)): # shrink the bound range by subtracting the neutral point
+    #         self.safe_steering = self.cmd_steering_bound - abs(self.neutralPt_radian)
+    #     if self.safe_steering < -(self.cmd_steering_bound - abs(self.neutralPt_radian)):
+    #         self.safe_steering = -(self.cmd_steering_bound - abs(self.neutralPt_radian))
+    #     self.safe_speed    = data.drive.speed
+    #     if self.safe_speed > (self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate): # decrease speed if compensation added value is higher than the bound 
+    #         self.safe_speed = self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate
+    #     if self.safe_speed < -(self.cmd_speed_bound- self.compensate_factor*self.max_speed_compensate):
+    #         self.safe_speed = -(self.cmd_speed_bound - self.compensate_factor*self.max_speed_compensate)
+    #     self.safe_time     = rospy.Time.now()
+    #     self.timeOut_flag = 0 # reset
     
     def timerOdomCB(self, event):
         # Serial read & publish 

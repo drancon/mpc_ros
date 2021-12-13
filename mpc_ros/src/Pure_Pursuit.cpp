@@ -27,7 +27,7 @@
 #include <tf/transform_datatypes.h>
 #include <nav_msgs/Path.h>
 #include <nav_msgs/Odometry.h>
-#include <ackermann_msgs/AckermannDriveStamped.h>
+// #include <ackermann_msgs/AckermannDriveStamped.h>
 #include <visualization_msgs/Marker.h>
 
 #include <Eigen/Core>
@@ -66,7 +66,7 @@ class PurePursuit
 
         ros::NodeHandle n_;
         ros::Subscriber odom_sub, path_sub, goal_sub, amcl_sub;
-        ros::Publisher ackermann_pub, cmdvel_pub, marker_pub;
+        ros::Publisher cmdvel_pub, marker_pub;
         ros::Timer timer1, timer2;
         tf::TransformListener tf_listener;
 
@@ -93,7 +93,7 @@ class PurePursuit
         visualization_msgs::Marker points, line_strip, goal_circle;
         geometry_msgs::Point odom_goal_pos, goal_pos;
         geometry_msgs::Twist cmd_vel;
-        ackermann_msgs::AckermannDriveStamped ackermann_cmd;
+        // ackermann_msgs::AckermannDriveStamped ackermann_cmd;
         nav_msgs::Odometry odom;
         nav_msgs::Path map_path, odom_path, odom_path_w, _odom_path;
 
@@ -149,7 +149,7 @@ PurePursuit::PurePursuit()
     goal_sub = n_.subscribe("/move_base_simple/goal", 1, &PurePursuit::goalCB, this);
     amcl_sub = n_.subscribe("/amcl_pose", 5, &PurePursuit::amclCB, this);
     marker_pub = n_.advertise<visualization_msgs::Marker>("/pure_pursuit/path_marker", 10);
-    ackermann_pub = n_.advertise<ackermann_msgs::AckermannDriveStamped>("/pure_pursuit/ackermann_cmd", 1);
+    // ackermann_pub = n_.advertise<ackermann_msgs::AckermannDriveStamped>("/pure_pursuit/ackermann_cmd", 1);
     if(cmd_vel_mode) cmdvel_pub = n_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);    
 
     //Timer
@@ -177,7 +177,7 @@ PurePursuit::PurePursuit()
     initMarker();
 
     cmd_vel = geometry_msgs::Twist();
-    ackermann_cmd = ackermann_msgs::AckermannDriveStamped();
+    // ackermann_cmd = ackermann_msgs::AckermannDriveStamped();
 	
 	
 }

@@ -50,7 +50,7 @@ class MPCNode
         ros::NodeHandle _nh;
         ros::Subscriber _sub_odom, _sub_gen_path, _sub_path, _sub_goal, _sub_amcl;
         ros::Publisher _pub_globalpath,_pub_odompath, _pub_twist, _pub_mpctraj;
-        ros::Publisher _pub_ackermann;
+        // ros::Publisher _pub_ackermann;
         ros::Timer _timer1;
         tf::TransformListener _tf_listener;
 

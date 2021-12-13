@@ -35,7 +35,7 @@
 
 import sys, select, termios, tty, math
 import rospy
-from ackermann_msgs.msg import AckermannDriveStamped
+# from ackermann_msgs.msg import AckermannDriveStamped
 
 header_msg = """
 Control HyphaROS Minicar!
@@ -81,8 +81,8 @@ if __name__=="__main__":
     settings = termios.tcgetattr(sys.stdin)
     
     rospy.init_node('minicar_teleop')
-    pub_cmd = rospy.Publisher('/ackermann_cmd', AckermannDriveStamped, queue_size=5)
-    pub_safe = rospy.Publisher('/ackermann_safe', AckermannDriveStamped, queue_size=5)
+    # pub_cmd = rospy.Publisher('/ackermann_cmd', AckermannDriveStamped, queue_size=5)
+    # pub_safe = rospy.Publisher('/ackermann_safe', AckermannDriveStamped, queue_size=5)
     safe_mode = bool(rospy.get_param('~safety_mode', False)) # true for safety cmds 
     speed_i = float(rospy.get_param('~speed_incremental', 0.1)) # m/s
     angle_i = float(rospy.get_param('~angle_incremental', 5.0*math.pi/180.0)) # rad (=5 degree)
@@ -111,7 +111,7 @@ if __name__=="__main__":
     target_speed = 0.0 # m/s
     target_angle = 0.0 # rad
     # Create AckermannDriveStamped msg object
-    ackermann_msg = AckermannDriveStamped()
+    # ackermann_msg = AckermannDriveStamped()
     #ackermann_msg.header.frame_id = 'car_id' # for future multi-cars applicaton 
 
     try:
@@ -153,21 +153,21 @@ if __name__=="__main__":
 
             # Publishing command
             #ackermann_msg.header.stamp = rospy.Time.now() # for future multi-cars applicaton 
-            ackermann_msg.drive.speed = target_speed
-            ackermann_msg.drive.steering_angle = target_angle
-            if safe_mode:
-                pub_safe.publish(ackermann_msg)
-            else:
-                pub_cmd.publish(ackermann_msg)
+            # ackermann_msg.drive.speed = target_speed
+            # ackermann_msg.drive.steering_angle = target_angle
+            # if safe_mode:
+            #     pub_safe.publish(ackermann_msg)
+            # else:
+            #     pub_cmd.publish(ackermann_msg)
 
     except Exception as e:
         print(e)
 
-    finally:
-        ackermann_msg.drive.speed = 0
-        ackermann_msg.drive.steering_angle = 0
-        pub_cmd.publish(ackermann_msg)
-        pub_safe.publish(ackermann_msg)
+    # finally:
+        # ackermann_msg.drive.speed = 0
+        # ackermann_msg.drive.steering_angle = 0
+        # pub_cmd.publish(ackermann_msg)
+        # pub_safe.publish(ackermann_msg)
 
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
 
