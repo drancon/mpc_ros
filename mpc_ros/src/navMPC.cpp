@@ -18,7 +18,7 @@
 //#include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
 #include <Eigen/Core>
-
+#include "ros/ros.h"
 // The program use fragments of code from
 // https://github.com/udacity/CarND-MPC-Quizzes
 
@@ -129,8 +129,8 @@ class FG_eval
               cost_etheta +=  (_w_etheta * CppAD::pow(vars[_etheta_start + i] - _ref_etheta, 2)); 
               cost_vel +=  (_w_vel * CppAD::pow(vars[_v_start + i] - _ref_vel, 2)); 
             }
-            cout << "-----------------------------------------------" <<endl;
-            cout << "cost_cte, etheta, velocity: " << cost_cte << ", " << cost_etheta  << ", " << cost_vel << endl;
+            // cout << "-----------------------------------------------" <<endl;
+            // cout << "cost_cte, etheta, velocity: " << cost_cte << ", " << cost_etheta  << ", " << cost_vel << endl;
             
 
             // Minimize the use of actuators.
@@ -138,14 +138,14 @@ class FG_eval
               fg[0] += _w_angvel * CppAD::pow(vars[_angvel_start + i], 2);
               fg[0] += _w_accel * CppAD::pow(vars[_a_start + i], 2);
             }
-            cout << "cost of actuators: " << fg[0] << endl; 
+            // cout << "cost of actuators: " << fg[0] << endl; 
 
             // Minimize the value gap between sequential actuations.
             for (int i = 0; i < _mpc_steps - 2; i++) {
               fg[0] += _w_angvel_d * CppAD::pow(vars[_angvel_start + i + 1] - vars[_angvel_start + i], 2);
               fg[0] += _w_accel_d * CppAD::pow(vars[_a_start + i + 1] - vars[_a_start + i], 2);
             }
-            cout << "cost of gap: " << fg[0] << endl; 
+            // cout << "cost of gap: " << fg[0] << endl; 
             
 
             // fg[x] for constraints
@@ -247,7 +247,7 @@ void MPC::LoadParams(const std::map<string, double> &params)
     _max_angvel = _params.find("ANGVEL") != _params.end() ? _params.at("ANGVEL") : _max_angvel;
     _max_throttle = _params.find("MAXTHR") != _params.end() ? _params.at("MAXTHR") : _max_throttle;
     _bound_value  = _params.find("BOUND") != _params.end()  ? _params.at("BOUND") : _bound_value;
-    
+    ROS_INFO("mpc_steps: %f", _mpc_steps);
     _x_start     = 0;
     _y_start     = _x_start + _mpc_steps;
     _theta_start   = _y_start + _mpc_steps;
@@ -272,13 +272,13 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
     const double v = state[3];
     const double cte = state[4];
     const double etheta = state[5];
-
+    
     // Set the number of model variables (includes both states and inputs).
     // For example: If the state is a 4 element vector, the actuators is a 2
     // element vector and there are 10 timesteps. The number of variables is:
     // 4 * 10 + 2 * 9
     size_t n_vars = _mpc_steps * 6 + (_mpc_steps - 1) * 2;
-    
+
     // Set the number of constraints
     size_t n_constraints = _mpc_steps * 6;
 
@@ -289,7 +289,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
     {
         vars[i] = 0;
     }
-
+    
     // Set the initial variable values
     vars[_x_start] = x;
     vars[_y_start] = y;
@@ -323,7 +323,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
         vars_upperbound[i] = _max_throttle;
     }
 
-
     // Lower and upper limits for the constraints
     // Should be 0 besides initial state.
     Dvector constraints_lowerbound(n_constraints);
@@ -350,7 +349,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
     FG_eval fg_eval(coeffs);
     fg_eval.LoadParams(_params);
 
-
     // options for IPOPT solver
     std::string options;
     // Uncomment this if you'd like more print information
@@ -368,22 +366,20 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
 
     // place to return solution
     CppAD::ipopt::solve_result<Dvector> solution;
-
     // solve the problem
     CppAD::ipopt::solve<Dvector, FG_eval>(
       options, vars, vars_lowerbound, vars_upperbound, constraints_lowerbound,
       constraints_upperbound, fg_eval, solution);
-
     // Check some of the solution values
     ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
     // Cost
     auto cost = solution.obj_value;
-    std::cout << "------------ Total Cost(solution): " << cost << "------------" << std::endl;
-    cout << "max_angvel:" << _max_angvel <<endl;
-    cout << "max_throttle:" << _max_throttle <<endl;
+    // std::cout << "------------ Total Cost(solution): " << cost << "------------" << std::endl;
+    // cout << "max_angvel:" << _max_angvel <<endl;
+    // cout << "max_throttle:" << _max_throttle <<endl;
  
-    cout << "-----------------------------------------------" <<endl;
+    // cout << "-----------------------------------------------" <<endl;
 
     this->mpc_x = {};
     this->mpc_y = {};

@@ -157,11 +157,13 @@ namespace mpc_ros{
             geometry_msgs::Twist _twist_msg;
 
             string _map_frame, _odom_frame, _base_frame;
+            string _odom_topic;
 
             MPC _mpc;
             map<string, double> _mpc_params;
             double _mpc_steps, _ref_cte, _ref_etheta, _ref_vel, _w_cte, _w_etheta, _w_vel, 
                 _w_angvel, _w_accel, _w_angvel_d, _w_accel_d, _max_angvel, _max_throttle, _bound_value;
+            int _poly_order;
 
             //double _Lf; 
             double _dt, _w, _throttle, _speed, _max_speed;

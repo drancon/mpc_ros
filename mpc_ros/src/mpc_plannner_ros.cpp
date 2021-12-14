@@ -48,10 +48,10 @@ namespace mpc_ros{
         footprint_spec_ = costmap_ros_->getRobotFootprint();
         
         planner_util_.initialize(tf, costmap_, costmap_ros_->getGlobalFrameID());
-        
-        if( private_nh.getParam( "odom_frame", _odom_frame ))
+
+        if( private_nh.getParam( "odom_topic", _odom_topic ))
         {
-            odom_helper_.setOdomTopic( _odom_frame );
+            odom_helper_.setOdomTopic( _odom_topic );
         }
 
         //Assuming this planner is being run within the navigation stack, we can
@@ -60,16 +60,17 @@ namespace mpc_ros{
         ros::NodeHandle nh_;
         std::string controller_frequency_param_name;
         double controller_frequency = 0;
-        if(!nh_.searchParam("move_base/controller_frequency", controller_frequency_param_name)) {
-            ROS_WARN("controller_frequency_param_name doesn't exits");
-        } else {
-            nh_.param(controller_frequency_param_name, controller_frequency, 20.0);
+        nh_.param("controller_freq", controller_frequency, 20.0);
+        // if(!nh_.searchParam("move_base/controller_frequency", controller_frequency_param_name)) {
+        //     ROS_WARN("controller_frequency_param_name doesn't exits");
+        // } else {
+        //     
             
-            if(controller_frequency > 0) {
-            } else {
-                ROS_WARN("A controller_frequency less than 0 has been set. Ignoring the parameter, assuming a rate of 20Hz");
-            }
-        }
+        //     if(controller_frequency > 0) {
+        //     } else {
+        //         ROS_WARN("A controller_frequency less than 0 has been set. Ignoring the parameter, assuming a rate of 20Hz");
+        //     }
+        // }
         //private_nh.param("vehicle_Lf", _Lf, 0.290); // distance between the front of the vehicle and its center of gravity
         _dt = double(1.0/controller_frequency); // time step duration dt in s 
 
@@ -77,10 +78,10 @@ namespace mpc_ros{
         private_nh.param<std::string>("map_frame", _map_frame, "map" ); 
         private_nh.param<std::string>("odom_frame", _odom_frame, "odom");
         private_nh.param<std::string>("base_frame", _base_frame, "base_footprint");
-
+        private_nh.param<std::string>("odom_topic", _odom_topic, "/odom" );
 
         //Publishers and Subscribers
-        _sub_odom   = _nh.subscribe("odom", 1, &MPCPlannerROS::odomCB, this);
+        _sub_odom   = _nh.subscribe(_odom_topic, 1, &MPCPlannerROS::odomCB, this);
         _pub_mpctraj   = _nh.advertise<nav_msgs::Path>("mpc_trajectory", 1);// MPC trajectory output
         _pub_odompath  = _nh.advertise<nav_msgs::Path>("mpc_reference", 1); // reference path for MPC ///mpc_reference 
         
@@ -89,6 +90,7 @@ namespace mpc_ros{
         _throttle = 0.0; 
         _w = 0.0;
         _speed = 0.0;
+        _poly_order = 3;
 
         //_ackermann_msg = ackermann_msgs::AckermannDriveStamped();
         _twist_msg = geometry_msgs::Twist();
@@ -144,7 +146,6 @@ namespace mpc_ros{
       _max_throttle = config.max_throttle;
       _bound_value = config.bound_value;
 
-
       planner_util_.reconfigureCB(limits, false);
 
   }
@@ -182,16 +183,16 @@ namespace mpc_ros{
         _mpc_params["BOUND"]    = _bound_value;
         _mpc.LoadParams(_mpc_params);
         //Display the parameters
-        cout << "\n===== Parameters =====" << endl;
-        cout << "debug_info: "  << _debug_info << endl;
-        cout << "delay_mode: "  << _delay_mode << endl;
+        // cout << "\n===== Parameters =====" << endl;
+        // cout << "debug_info: "  << _debug_info << endl;
+        // cout << "delay_mode: "  << _delay_mode << endl;
         //cout << "vehicle_Lf: "  << _Lf << endl;
-        cout << "frequency: "   << _dt << endl;
-        cout << "mpc_steps: "   << _mpc_steps << endl;
-        cout << "mpc_ref_vel: " << _ref_vel << endl;
-        cout << "mpc_w_cte: "   << _w_cte << endl;
-        cout << "mpc_w_etheta: "  << _w_etheta << endl;
-        cout << "mpc_max_angvel: "  << _max_angvel << endl;
+        // cout << "frequency: "   << _dt << endl;
+        // cout << "mpc_steps: "   << _mpc_steps << endl;
+        // cout << "mpc_ref_vel: " << _ref_vel << endl;
+        // cout << "mpc_w_cte: "   << _w_cte << endl;
+        // cout << "mpc_w_etheta: "  << _w_etheta << endl;
+        // cout << "mpc_max_angvel: "  << _max_angvel << endl;
 
         latchedStopRotateController_.resetLatching();
         planner_util_.setPlan(orig_global_plan);
@@ -279,14 +280,14 @@ namespace mpc_ros{
             base_local_planner::LocalPlannerLimits limits = planner_util_.getCurrentLimits();
             ROS_WARN_NAMED("mpc_ros", "Reached the goal!!!.");
             return true;
-            /*return latchedStopRotateController_.computeVelocityCommandsStopRotate(
-                cmd_vel,
-                limits.getAccLimits(),
-                dp_->getSimPeriod(),
-                &planner_util_,
-                odom_helper_,
-                current_pose_,
-                boost::bind(&MPCPlannerROS::checkTrajectory, dp_, _1, _2, _3));*/
+            // return latchedStopRotateController_.computeVelocityCommandsStopRotate(
+            //     cmd_vel,
+            //     limits.getAccLimits(),
+            //     dp_->getSimPeriod(),
+            //     &planner_util_,
+            //     odom_helper_,
+            //     current_pose_,
+            //     boost::bind(&MPCPlannerROS::checkTrajectory, dp_, _1, _2, _3));
 
         }
 
@@ -409,12 +410,13 @@ namespace mpc_ros{
         tf::Pose pose;
         tf::poseMsgToTF(base_odom.pose.pose, pose);
         double theta = tf::getYaw(pose.getRotation());
-        const double v = base_odom.twist.twist.linear.x; //twist: body fixed frame
+        const double v = base_odom.twist.twist.linear.x*cos(theta) + base_odom.twist.twist.linear.y*sin(theta); //twist: body fixed frame
         // Update system inputs: U=[w, throttle]
         const double w = _w; // steering -> w
         //const double steering = _steering;  // radian
         const double throttle = _throttle; // accel: >0; brake: <0
         const double dt = _dt;
+        int poly_order = _poly_order;
 
         //Update path waypoints (conversion to odom frame)
         nav_msgs::Path odom_path = nav_msgs::Path();
@@ -451,21 +453,40 @@ namespace mpc_ros{
                 total_length = total_length + _waypointsDist; 
                 sampling = sampling + 1;  
             }
+
+            if(odom_path.poses.size() < 2) 
+            {
+                nav_msgs::Path tmp_path = nav_msgs::Path();
+                geometry_msgs::PoseStamped base_pose;
+                base_pose.pose.position.x = base_odom.pose.pose.position.x;
+                base_pose.pose.position.y = base_odom.pose.pose.position.y;
+                base_pose.pose.position.z = base_odom.pose.pose.position.z;
+                base_pose.pose.orientation.x = base_odom.pose.pose.orientation.x;
+                base_pose.pose.orientation.y = base_odom.pose.pose.orientation.y;
+                base_pose.pose.orientation.z = base_odom.pose.pose.orientation.z;
+                base_pose.pose.orientation.w = base_odom.pose.pose.orientation.w;
+                tmp_path.poses.push_back(base_pose); 
+                tmp_path.poses.push_back(goal_pose);
+                odom_path = tmp_path;
+                ROS_INFO_STREAM(base_pose);
+                ROS_INFO("*********************");
+                ROS_INFO_STREAM(goal_pose);
+                ROS_INFO("*********************");
+                ROS_INFO_STREAM(odom_path.poses.size());
+            }
+
+            if(odom_path.poses.size() < poly_order + 1)
+            {
+                // change order of polynomial
+                int length_current = odom_path.poses.size();
+                poly_order = length_current - 1;
+            }
            
-            if(odom_path.poses.size() > 3)
-            {
-                // publish odom path
-                odom_path.header.frame_id = "odom";
-                odom_path.header.stamp = ros::Time::now();
-                _pub_odompath.publish(odom_path);
-            }
-            else
-            {
-                ROS_DEBUG_NAMED("mpc_ros", "Failed to path generation since small down-sampling path.");
-                _waypointsDist = -1;
-                result_traj_.cost_ = -1;
-                return result_traj_;
-            }
+            // publish odom path
+            odom_path.header.frame_id = _odom_frame;
+            odom_path.header.stamp = ros::Time::now();
+            _pub_odompath.publish(odom_path);
+
             //DEBUG      
             if(_debug_info){
                 cout << endl << "odom_path: " << odom_path.poses.size()
@@ -484,7 +505,7 @@ namespace mpc_ros{
         const double costheta = cos(theta);
         const double sintheta = sin(theta);
         
-        cout << "px, py : " << px << ", "<< py << ", theta: " << theta << " , N: " << N << endl;
+        // cout << "px, py : " << px << ", "<< py << ", theta: " << theta << " , N: " << N << endl;
         // Convert to the vehicle coordinate system
         VectorXd x_veh(N);
         VectorXd y_veh(N);
@@ -498,17 +519,18 @@ namespace mpc_ros{
         }
 
         // Fit waypoints
-        auto coeffs = polyfit(x_veh, y_veh, 3); 
+        auto coeffs = polyfit(x_veh, y_veh, poly_order);
         const double cte  = polyeval(coeffs, 0.0);
-        cout << "coeffs : " << coeffs[0] << endl;
-        cout << "pow : " << pow(0.0 ,0) << endl;
-        cout << "cte : " << cte << endl;
+        // cout << "coeffs : " << coeffs[0] << endl;
+        // cout << "pow : " << pow(0.0 ,0) << endl;
+        // cout << "cte : " << cte << endl;
         double etheta = atan(coeffs[1]);
 
         // Global coordinate system about theta
         double gx = 0;
         double gy = 0;
         int N_sample = N * 0.3;
+        N_sample = std::max(N_sample, 1);
         for(int i = 1; i < N_sample; i++) 
         {
             gx += odom_path.poses[i].pose.position.x - odom_path.poses[i-1].pose.position.x;
@@ -528,14 +550,14 @@ namespace mpc_ros{
             etheta = temp_theta - traj_deg;
         else
             etheta = 0;  
-        cout << "etheta: "<< etheta << ", atan2(gy,gx): " << atan2(gy,gx) << ", temp_theta:" << traj_deg << endl;
+        // cout << "etheta: "<< etheta << ", atan2(gy,gx): " << atan2(gy,gx) << ", temp_theta:" << traj_deg << endl;
 
         // Difference bewteen current position and goal position
         const double x_err = goal_pose.pose.position.x -  base_odom.pose.pose.position.x;
         const double y_err = goal_pose.pose.position.y -  base_odom.pose.pose.position.y;
         const double goal_err = sqrt(x_err*x_err + y_err*y_err);
 
-        cout << "x_err:"<< x_err << ", y_err:"<< y_err  << endl;
+        // cout << "x_err:"<< x_err << ", y_err:"<< y_err  << endl;
 
         VectorXd state(6);
         if(_delay_mode)
@@ -560,17 +582,20 @@ namespace mpc_ros{
         ros::Time begin = ros::Time::now();
         vector<double> mpc_results = _mpc.Solve(state, coeffs);    
         ros::Time end = ros::Time::now();
-        cout << "Duration: " << end.sec << "." << end.nsec << endl << begin.sec<< "."  << begin.nsec << endl;
+        // cout << "Duration: " << end.sec << "." << end.nsec << endl << begin.sec<< "."  << begin.nsec << endl;
             
         // MPC result (all described in car frame), output = (acceleration, w)        
         _w = mpc_results[0]; // radian/sec, angular velocity
         _throttle = mpc_results[1]; // acceleration
 
         _speed = v + _throttle * dt;  // speed
-        if (_speed >= _max_speed)
+        // ROS_INFO("v(%f), throttle(%f), speed(%f/%f) / w(%f)", v, throttle, _speed, _max_speed, _w);
+        if (_speed >= _max_speed) {
             _speed = _max_speed;
-        if(_speed <= 0.0)
-            _speed = 0.0;
+        }
+        if(_speed <= -1*_max_speed) {
+            _speed = -1*_max_speed;
+        }
 
         if(_debug_info)
         {
@@ -625,7 +650,7 @@ namespace mpc_ros{
             q.setRPY(0, 0, _w);
             tf2::convert(q, drive_velocities.pose.orientation);
         }
-        
+
         // publish the mpc trajectory
         _pub_mpctraj.publish(_mpc_traj);
 
